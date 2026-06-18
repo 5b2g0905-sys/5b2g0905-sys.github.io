@@ -1,6 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { carData, brandStories } from './data/carData';
 import './App.css';
+import './Comments.css';
+import { subscribeComments, addComment, isOfflineMode, type CommentItem } from './firebase';
+
+function hexToRgb(hex: string): string {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return result 
+    ? `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}`
+    : '255, 255, 255';
+}
 
 // SVG Silhouettes for car body types
 const CarSilhouette: React.FC<{ type: 'supercar' | 'sedan' | 'suv' | 'cabriolet' | 'wagon'; color: string }> = ({ type, color }) => {
@@ -304,6 +313,117 @@ function App() {
   const animationRef = useRef<number | null>(null);
   const revIntervalRef = useRef<number | null>(null);
 
+  // Discussion & Danmaku States
+  const [comments, setComments] = useState<CommentItem[]>([]);
+  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
+  const [danmakuEnabled, setDanmakuEnabled] = useState<boolean>(true);
+  const [nickname, setNickname] = useState<string>('');
+  const [commentText, setCommentText] = useState<string>('');
+  const [commentBrand, setCommentBrand] = useState<string>('General');
+  const [isDanmakuInput, setIsDanmakuInput] = useState<boolean>(true);
+  const [danmakuSpeed, setDanmakuSpeed] = useState<'slow' | 'normal' | 'fast'>('normal');
+  const [offline, setOffline] = useState<boolean>(false);
+  const [activeDanmakus, setActiveDanmakus] = useState<Array<{
+    id: string;
+    text: string;
+    color: string;
+    glow: string;
+    speed: string;
+    track: number;
+  }>>([]);
+
+  const lastTimestampRef = useRef<number>(Date.now());
+
+  // Subscribe to comments
+  useEffect(() => {
+    const unsubscribe = subscribeComments((newComments) => {
+      setComments(newComments);
+      setOffline(isOfflineMode());
+
+      // Filter for new danmakus
+      const newDanmakus = newComments.filter(
+        c => c.type === 'danmaku' && c.timestamp > lastTimestampRef.current
+      );
+
+      if (newDanmakus.length > 0) {
+        const danmakusToAdd = newDanmakus.map((c, index) => {
+          const colors = brandColors[c.brand as BrandType] || { main: '#ffffff', glow: 'rgba(255, 255, 255, 0.5)' };
+          const track = Math.floor(Math.random() * 12); // 12 lanes
+          return {
+            id: c.id + '_' + index + '_' + Math.random(),
+            text: `[${c.name}] : ${c.content}`,
+            color: colors.main,
+            glow: colors.glow,
+            speed: c.speed,
+            track: track
+          };
+        });
+
+        setActiveDanmakus(prev => [...prev, ...danmakusToAdd]);
+
+        danmakusToAdd.forEach(d => {
+          const duration = d.speed === 'fast' ? 5000 : d.speed === 'slow' ? 12000 : 8000;
+          setTimeout(() => {
+            setActiveDanmakus(prev => prev.filter(item => item.id !== d.id));
+          }, duration);
+        });
+      }
+
+      if (newComments.length > 0) {
+        const maxTs = Math.max(...newComments.map(c => c.timestamp));
+        if (maxTs > lastTimestampRef.current) {
+          lastTimestampRef.current = maxTs;
+        }
+      }
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, []);
+
+  // Sync commentBrand default when selectedBrand changes
+  useEffect(() => {
+    setCommentBrand(selectedBrand);
+  }, [selectedBrand]);
+
+  // Adjust body padding when sidebar opens
+  useEffect(() => {
+    if (isSidebarOpen) {
+      document.body.classList.add('sidebar-open');
+    } else {
+      document.body.classList.remove('sidebar-open');
+    }
+    return () => {
+      document.body.classList.remove('sidebar-open');
+    };
+  }, [isSidebarOpen]);
+
+  const handlePostComment = async () => {
+    if (!nickname.trim() || !commentText.trim()) return;
+
+    let color = '#ffffff';
+    if (commentBrand !== 'General') {
+      color = brandColors[commentBrand as BrandType]?.main || '#ffffff';
+    } else {
+      color = brandColors[selectedBrand]?.main || '#00f2fe';
+    }
+
+    try {
+      await addComment({
+        name: nickname,
+        content: commentText,
+        brand: commentBrand,
+        type: isDanmakuInput ? 'danmaku' : 'normal',
+        speed: danmakuSpeed,
+        color: color
+      });
+      setCommentText('');
+    } catch (e) {
+      console.error("Failed to post comment:", e);
+    }
+  };
+
   // Find active car
   const activeCar = carData.find(c => c.id === selectedCarId) || carData[0];
   const brandStory = brandStories[selectedBrand];
@@ -537,6 +657,21 @@ function App() {
             </svg>
             <span>車庫比較</span>
             <span className="garage-badge">{garageCars.length}</span>
+          </button>
+
+          {/* Discussion Toggle Button */}
+          <button
+            type="button"
+            className={`discussion-toggle-btn ${isSidebarOpen ? 'active' : ''}`}
+            onClick={() => setIsSidebarOpen(prev => !prev)}
+            id="discussion-toggle-btn"
+            style={{ marginLeft: '10px' }}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline-block', verticalAlign: 'middle' }}>
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+            </svg>
+            <span>留言討論區</span>
+            <span className="discussion-badge-dot"></span>
           </button>
         </div>
       </header>
@@ -1040,6 +1175,205 @@ function App() {
           )}
         </div>
       </section>
+
+      {/* Comments Sidebar Panel */}
+      <section className={`comments-sidebar ${isSidebarOpen ? 'open' : ''}`} id="comments-sidebar-panel">
+        <div className="comments-header">
+          <h2 className="comments-title">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px', verticalAlign: 'middle', display: 'inline-block' }}>
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+            </svg>
+            <span>車迷留言討論區</span>
+          </h2>
+          <button 
+            type="button" 
+            className="close-comments-btn"
+            onClick={() => setIsSidebarOpen(false)}
+          >
+            收起面板
+          </button>
+        </div>
+
+        {/* Firebase connection status */}
+        <div className={offline ? "offline-banner" : "online-banner"}>
+          {offline ? (
+            <div className="offline-text">
+              <span className="offline-dot"></span>
+              <span>⚠️ 離線瀏覽模式 (僅儲存於本地)</span>
+            </div>
+          ) : (
+            <div className="online-text">
+              <span className="online-dot"></span>
+              <span>✓ 雲端即時連線中 (Firebase Firestore)</span>
+            </div>
+          )}
+        </div>
+
+        {/* Comment input form */}
+        <div className="comments-form-container">
+          <div className="comment-input-group">
+            <label className="comment-input-label">暱稱 (Nickname)</label>
+            <input 
+              type="text" 
+              className="comment-input" 
+              placeholder="輸入車迷暱稱..."
+              value={nickname}
+              onChange={(e) => setNickname(e.target.value)}
+              maxLength={15}
+            />
+          </div>
+
+          <div className="comment-row-flex">
+            <div className="comment-flex-item">
+              <label className="comment-input-label">提及品牌 (Brand)</label>
+              <select 
+                className="comment-select"
+                value={commentBrand}
+                onChange={(e) => setCommentBrand(e.target.value)}
+              >
+                <option value="General">通用討論</option>
+                {brands.map(b => (
+                  <option key={b} value={b}>{b}</option>
+                ))}
+              </select>
+            </div>
+            <div className="comment-flex-item">
+              <label className="comment-input-label">彈幕速度 (Speed)</label>
+              <select 
+                className="comment-select"
+                value={danmakuSpeed}
+                onChange={(e) => setDanmakuSpeed(e.target.value as any)}
+                disabled={!isDanmakuInput}
+              >
+                <option value="slow">優雅 (慢速)</option>
+                <option value="normal">標準</option>
+                <option value="fast">極速 (快速)</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="comment-input-group">
+            <label className="comment-input-label">留言內容 (Message)</label>
+            <textarea 
+              className="comment-input comment-textarea" 
+              placeholder="發表你的超跑夢想或留言..."
+              value={commentText}
+              onChange={(e) => setCommentText(e.target.value)}
+              maxLength={100}
+            />
+          </div>
+
+          <div className="danmaku-toggle-container">
+            <span className="danmaku-toggle-label">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#ff00e6' }}>
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+              </svg>
+              同時發送為彈幕 (Send as Danmaku)
+            </span>
+            <label className="switch">
+              <input 
+                type="checkbox" 
+                checked={isDanmakuInput}
+                onChange={(e) => setIsDanmakuInput(e.target.checked)}
+              />
+              <span className="slider-toggle"></span>
+            </label>
+          </div>
+
+          <button 
+            type="button" 
+            className="comment-submit-btn"
+            onClick={handlePostComment}
+            disabled={!nickname.trim() || !commentText.trim()}
+          >
+            <span>發送留言</span>
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ verticalAlign: 'middle' }}>
+              <line x1="22" y1="2" x2="11" y2="13" />
+              <polygon points="22 2 15 22 11 13 2 9 22 2" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Global danmaku toggle */}
+        <div style={{ padding: '10px 20px 0', borderBottom: '1px solid rgba(255,255,255,0.04)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontFamily: 'var(--tech)' }}>彈幕顯示開關</span>
+          <label className="switch">
+            <input 
+              type="checkbox" 
+              checked={danmakuEnabled}
+              onChange={(e) => setDanmakuEnabled(e.target.checked)}
+            />
+            <span className="slider-toggle"></span>
+          </label>
+        </div>
+
+        {/* Scrollable list of comments */}
+        <div className="comments-list-container">
+          {comments.length > 0 ? (
+            comments.map((c) => {
+              const brandColor = c.brand === 'General' ? '#ffffff' : brandColors[c.brand as BrandType]?.main || '#ffffff';
+              const timeString = new Date(c.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+              return (
+                <div 
+                  key={c.id} 
+                  className="comment-card"
+                  style={{ '--card-brand-color': brandColor } as React.CSSProperties}
+                >
+                  <div className="comment-card-header">
+                    <span className="comment-card-user">{c.name}</span>
+                    <div className="comment-card-meta">
+                      {c.type === 'danmaku' && (
+                        <span className="comment-card-danmaku-badge">
+                          <span>☄</span> 彈幕
+                        </span>
+                      )}
+                      <span 
+                        className="comment-card-brand"
+                        style={{ '--brand-color-rgb': hexToRgb(brandColor), '--card-brand-color': brandColor } as React.CSSProperties}
+                      >
+                        {c.brand === 'General' ? '通用' : c.brand}
+                      </span>
+                      <span className="comment-card-time">{timeString}</span>
+                    </div>
+                  </div>
+                  <div className="comment-card-content">{c.content}</div>
+                </div>
+              );
+            })
+          ) : (
+            <div className="comments-empty-state">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-muted)' }}>
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+              </svg>
+              <span>尚無留言。成為第一個留言的車迷吧！</span>
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* Fullscreen Danmaku Overlay */}
+      {danmakuEnabled && (
+        <div className="danmaku-overlay">
+          {activeDanmakus.map((d) => {
+            const speedDuration = d.speed === 'fast' ? '5s' : d.speed === 'slow' ? '12s' : '8s';
+            return (
+              <div
+                key={d.id}
+                className="danmaku-item"
+                style={{
+                  top: `${10 + d.track * 7}%`,
+                  color: d.color,
+                  '--danmaku-color': d.color,
+                  '--danmaku-glow': d.glow,
+                  animation: `danmaku-scroll ${speedDuration} linear forwards`
+                } as React.CSSProperties}
+              >
+                {d.text}
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
