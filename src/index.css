@@ -6,9 +6,9 @@
   --bg-secondary: rgba(255, 255, 255, 0.85);
   --bg-tertiary: rgba(241, 245, 249, 0.75);
   
-  --text-primary: #0f172a;
-  --text-secondary: #475569;
-  --text-muted: #94a3b8;
+  --text-primary: #000000;
+  --text-secondary: #000000;
+  --text-muted: #333333;
   
   --border-color: rgba(15, 23, 42, 0.08);
   --border-hover: rgba(15, 23, 42, 0.15);
@@ -16,9 +16,9 @@
   --shadow-glow: 0 0 20px rgba(0, 242, 254, 0.08);
   --glass-blur: blur(12px);
   
-  --sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  --tech: 'Rajdhani', sans-serif;
-  --display: 'Orbitron', sans-serif;
+  --sans: "Microsoft JhengHei", "微軟正黑體", 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --tech: "Microsoft JhengHei", "微軟正黑體", 'Rajdhani', sans-serif;
+  --display: "Microsoft JhengHei", "微軟正黑體", 'Orbitron', sans-serif;
 
   /* Default brand variables (will be overridden dynamically in React) */
   --brand-color: #00f2fe;
