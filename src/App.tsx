@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { carData, brandStories } from './data/carData';
 import './App.css';
 import './Comments.css';
-import { subscribeComments, addComment, isOfflineMode, type CommentItem } from './firebase';
+import { subscribeComments, addComment, deleteComment, isOfflineMode, type CommentItem } from './firebase';
 
 function hexToRgb(hex: string): string {
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
@@ -463,6 +463,14 @@ function App() {
       setCommentText('');
     } catch (e) {
       console.error("Failed to post comment:", e);
+    }
+  };
+
+  const handleDeleteComment = async (id: string) => {
+    try {
+      await deleteComment(id);
+    } catch (e) {
+      console.error("Failed to delete comment:", e);
     }
   };
 
@@ -1376,6 +1384,32 @@ function App() {
                         {c.brand === 'General' ? '通用' : c.brand}
                       </span>
                       <span className="comment-card-time">{timeString}</span>
+                      <button 
+                        type="button"
+                        className="comment-delete-btn"
+                        onClick={() => handleDeleteComment(c.id)}
+                        title="刪除留言"
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: 'var(--text-muted)',
+                          cursor: 'pointer',
+                          padding: '0 4px',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          marginLeft: '6px',
+                          transition: 'color 0.2s',
+                          verticalAlign: 'middle',
+                        }}
+                        onMouseEnter={(e) => (e.currentTarget.style.color = '#ff1744')}
+                        onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-muted)')}
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="3 6 5 6 21 6"></polyline>
+                          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                        </svg>
+                      </button>
                     </div>
                   </div>
                   <div className="comment-card-content">{c.content}</div>

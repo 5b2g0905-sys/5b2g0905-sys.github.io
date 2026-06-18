@@ -7,7 +7,9 @@ import {
   query, 
   orderBy, 
   limit, 
-  serverTimestamp
+  serverTimestamp,
+  deleteDoc,
+  doc
 } from 'firebase/firestore';
 
 // Firebase credentials obtained from App SDK Config or environment variables
@@ -178,6 +180,30 @@ export const addComment = async (comment: Omit<CommentItem, 'id' | 'timestamp'>)
     const local = getLocalComments();
     local.push(newComment);
     saveLocalComments(local);
+    window.dispatchEvent(new Event('storage-local-update'));
+  }
+};
+
+/**
+ * Deletes a comment by ID from Firestore, or falls back to localStorage.
+ */
+export const deleteComment = async (id: string): Promise<void> => {
+  if (offlineMode || !db) {
+    const local = getLocalComments();
+    const updated = local.filter(c => c.id !== id);
+    saveLocalComments(updated);
+    window.dispatchEvent(new Event('storage-local-update'));
+    return;
+  }
+
+  try {
+    const docRef = doc(db, 'comments', id);
+    await deleteDoc(docRef);
+  } catch (err: any) {
+    console.warn("Failed to delete from Firestore. Falling back to local storage.", err);
+    const local = getLocalComments();
+    const updated = local.filter(c => c.id !== id);
+    saveLocalComments(updated);
     window.dispatchEvent(new Event('storage-local-update'));
   }
 };
