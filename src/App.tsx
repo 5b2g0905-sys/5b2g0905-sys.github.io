@@ -1389,21 +1389,6 @@ function App() {
                         className="comment-delete-btn"
                         onClick={() => handleDeleteComment(c.id)}
                         title="刪除留言"
-                        style={{
-                          background: 'none',
-                          border: 'none',
-                          color: 'var(--text-muted)',
-                          cursor: 'pointer',
-                          padding: '0 4px',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          marginLeft: '6px',
-                          transition: 'color 0.2s',
-                          verticalAlign: 'middle',
-                        }}
-                        onMouseEnter={(e) => (e.currentTarget.style.color = '#ff1744')}
-                        onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-muted)')}
                       >
                         <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                           <polyline points="3 6 5 6 21 6"></polyline>

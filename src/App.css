@@ -24,7 +24,7 @@
   backdrop-filter: var(--glass-blur);
   position: relative;
   overflow: hidden;
-  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.04);
   transition: border-color 0.5s, box-shadow 0.5s;
 }
 
@@ -179,7 +179,7 @@
   backdrop-filter: var(--glass-blur);
   display: flex;
   flex-direction: column;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.03);
   transition: border-color 0.5s;
   overflow: hidden;
 }
@@ -387,7 +387,7 @@
 .car-card:hover {
   transform: translateY(-4px);
   border-color: rgba(var(--brand-color-rgb), 0.4);
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.4), 0 0 15px rgba(var(--brand-color-rgb), 0.1);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.04), 0 0 15px rgba(var(--brand-color-rgb), 0.1);
 }
 
 .car-card.selected {
@@ -936,7 +936,7 @@ input:checked + .slider-toggle:before {
   z-index: 100;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.8);
+  box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.05);
   transform: translateY(100%);
   transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
   padding: 20px;
@@ -1156,7 +1156,7 @@ input:checked + .slider-toggle:before {
   border: 1px solid var(--border-color);
   position: relative;
   background: #000;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
 }
 
 .dossier-image {
