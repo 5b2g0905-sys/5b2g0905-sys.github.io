@@ -10,15 +10,15 @@ import {
   serverTimestamp
 } from 'firebase/firestore';
 
-// Firebase credentials obtained from App SDK Config
+// Firebase credentials obtained from App SDK Config or environment variables
 const firebaseConfig = {
-  projectId: "car-project-60ca3",
-  appId: "1:993135362157:web:e8498631b0a6fa760f7f64",
-  storageBucket: "car-project-60ca3.firebasestorage.app",
-  apiKey: "AIzaSyAWYOpSR8VjwtsjcSJ2_ztNZAw19py4CRE",
-  authDomain: "car-project-60ca3.firebaseapp.com",
-  messagingSenderId: "993135362157",
-  measurementId: "G-8R6MJEK6K1"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyAWYOpSR8VjwtsjcSJ2_ztNZAw19py4CRE",
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "car-project-60ca3.firebaseapp.com",
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "car-project-60ca3",
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "car-project-60ca3.firebasestorage.app",
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "993135362157",
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:993135362157:web:e8498631b0a6fa760f7f64",
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || "G-8R6MJEK6K1"
 };
 
 export interface CommentItem {
