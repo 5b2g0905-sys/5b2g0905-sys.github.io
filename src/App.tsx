@@ -332,55 +332,97 @@ function App() {
     track: number;
   }>>([]);
 
-  const lastTimestampRef = useRef<number>(Date.now());
+  const streamedCommentIdsRef = useRef<Set<string>>(new Set());
+  const laneLastUsedRef = useRef<number[]>(new Array(12).fill(0));
+  const danmakuEnabledRef = useRef<boolean>(danmakuEnabled);
+
+  // Sync danmakuEnabled with its ref
+  useEffect(() => {
+    danmakuEnabledRef.current = danmakuEnabled;
+  }, [danmakuEnabled]);
 
   // Subscribe to comments
   useEffect(() => {
     const unsubscribe = subscribeComments((newComments) => {
       setComments(newComments);
       setOffline(isOfflineMode());
-
-      // Filter for new danmakus
-      const newDanmakus = newComments.filter(
-        c => c.type === 'danmaku' && c.timestamp > lastTimestampRef.current
-      );
-
-      if (newDanmakus.length > 0) {
-        const danmakusToAdd = newDanmakus.map((c, index) => {
-          const colors = brandColors[c.brand as BrandType] || { main: '#ffffff', glow: 'rgba(255, 255, 255, 0.5)' };
-          const track = Math.floor(Math.random() * 12); // 12 lanes
-          return {
-            id: c.id + '_' + index + '_' + Math.random(),
-            text: `[${c.name}] : ${c.content}`,
-            color: colors.main,
-            glow: colors.glow,
-            speed: c.speed,
-            track: track
-          };
-        });
-
-        setActiveDanmakus(prev => [...prev, ...danmakusToAdd]);
-
-        danmakusToAdd.forEach(d => {
-          const duration = d.speed === 'fast' ? 5000 : d.speed === 'slow' ? 12000 : 8000;
-          setTimeout(() => {
-            setActiveDanmakus(prev => prev.filter(item => item.id !== d.id));
-          }, duration);
-        });
-      }
-
-      if (newComments.length > 0) {
-        const maxTs = Math.max(...newComments.map(c => c.timestamp));
-        if (maxTs > lastTimestampRef.current) {
-          lastTimestampRef.current = maxTs;
-        }
-      }
     });
 
     return () => {
       unsubscribe();
     };
   }, []);
+
+  // Function to get the best lane to avoid crowding/overlap
+  const getBestTrack = () => {
+    const now = Date.now();
+    let bestTrack = 0;
+    let oldestTime = now;
+    for (let i = 0; i < 12; i++) {
+      if (laneLastUsedRef.current[i] < oldestTime) {
+        oldestTime = laneLastUsedRef.current[i];
+        bestTrack = i;
+      }
+    }
+    // Set last used time.
+    laneLastUsedRef.current[bestTrack] = now;
+    return bestTrack;
+  };
+
+  // Function to queue a single danmaku
+  const queueDanmaku = (c: CommentItem, delay: number) => {
+    // Add to streamed set immediately so it won't be queued again
+    streamedCommentIdsRef.current.add(c.id);
+
+    setTimeout(() => {
+      if (!danmakuEnabledRef.current) return;
+
+      const colors = brandColors[c.brand as BrandType] || { main: '#ffffff', glow: 'rgba(255, 255, 255, 0.5)' };
+      const track = getBestTrack();
+
+      const newD = {
+        id: c.id + '_' + Date.now() + '_' + Math.random(),
+        text: `[${c.name}] : ${c.content}`,
+        color: colors.main,
+        glow: colors.glow,
+        speed: c.speed,
+        track: track
+      };
+
+      setActiveDanmakus(prev => [...prev, newD]);
+
+      const duration = c.speed === 'fast' ? 5000 : c.speed === 'slow' ? 12000 : 8000;
+      setTimeout(() => {
+        setActiveDanmakus(prev => prev.filter(item => item.id !== newD.id));
+      }, duration);
+
+    }, delay);
+  };
+
+  // Manage streaming of comments when active or new comments arrive
+  useEffect(() => {
+    if (!danmakuEnabled || comments.length === 0) return;
+
+    // Filter comments of type 'danmaku' that haven't been streamed
+    const unstreamed = comments.filter(
+      c => c.type === 'danmaku' && !streamedCommentIdsRef.current.has(c.id)
+    );
+
+    if (unstreamed.length > 0) {
+      // Sort oldest first
+      unstreamed.sort((a, b) => a.timestamp - b.timestamp);
+
+      if (unstreamed.length === 1) {
+        // Stream immediately for a single new comment
+        queueDanmaku(unstreamed[0], 0);
+      } else {
+        // Stagger multiple comments (e.g., initial load or toggled back on)
+        unstreamed.forEach((c, index) => {
+          queueDanmaku(c, index * 1200 + Math.random() * 300);
+        });
+      }
+    }
+  }, [danmakuEnabled, comments]);
 
   // Sync commentBrand default when selectedBrand changes
   useEffect(() => {
