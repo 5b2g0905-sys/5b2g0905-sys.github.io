@@ -304,6 +304,10 @@ function App() {
   const [garageCars, setGarageCars] = useState<string[]>([]);
   const [garageOpen, setGarageOpen] = useState<boolean>(false);
 
+  // Homework Modal States
+  const [homeworkOpen, setHomeworkOpen] = useState<boolean>(false);
+  const [activeGame, setActiveGame] = useState<'mine' | 'water'>('mine');
+
   // Sound Sim States
   const [isReving, setIsReving] = useState<boolean>(false);
   const [revPercent, setRevPercent] = useState<number>(0);
@@ -707,6 +711,24 @@ function App() {
             </svg>
             <span>車庫比較</span>
             <span className="garage-badge">{garageCars.length}</span>
+          </button>
+
+          {/* Homework (Games) Trigger */}
+          <button 
+            type="button" 
+            className={`homework-trigger ${homeworkOpen ? 'active' : ''}`}
+            onClick={() => setHomeworkOpen(true)}
+            id="homework-trigger-btn"
+            style={{ marginLeft: '10px' }}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '6px' }}>
+              <rect x="2" y="6" width="20" height="12" rx="3" ry="3"></rect>
+              <line x1="6" y1="12" x2="10" y2="12"></line>
+              <line x1="8" y1="10" x2="8" y2="14"></line>
+              <line x1="15" y1="13" x2="15.01" y2="13"></line>
+              <line x1="18" y1="11" x2="18.01" y2="11"></line>
+            </svg>
+            <span>課堂作業</span>
           </button>
 
           {/* Discussion Toggle Button */}
@@ -1223,6 +1245,60 @@ function App() {
               <span>比較庫內沒有車款。請點擊車款卡片右上角的「+」將車款加入比較！</span>
             </div>
           )}
+        </div>
+      </section>
+
+      {/* 4. Homework Games Modal Overlay */}
+      <section className={`homework-modal-overlay ${homeworkOpen ? 'open' : ''}`} id="homework-modal">
+        <div className="homework-modal-content">
+          <div className="homework-modal-header">
+            <h2 className="homework-modal-title">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '8px', verticalAlign: 'middle', display: 'inline-block' }}>
+                <rect x="2" y="6" width="20" height="12" rx="3" ry="3"></rect>
+                <line x1="6" y1="12" x2="10" y2="12"></line>
+                <line x1="8" y1="10" x2="8" y2="14"></line>
+                <line x1="15" y1="13" x2="15.01" y2="13"></line>
+                <line x1="18" y1="11" x2="18.01" y2="11"></line>
+              </svg>
+              <span>課堂作業網頁遊玩</span>
+            </h2>
+            <button 
+              type="button" 
+              className="close-homework-btn"
+              onClick={() => setHomeworkOpen(false)}
+              id="close-homework-btn"
+            >
+              關閉遊戲
+            </button>
+          </div>
+
+          <div className="homework-tab-container">
+            <button 
+              type="button"
+              className={`homework-tab-btn ${activeGame === 'mine' ? 'active' : ''}`} 
+              onClick={() => setActiveGame('mine')}
+            >
+              掃地雷 (Minesweeper)
+            </button>
+            <button 
+              type="button"
+              className={`homework-tab-btn ${activeGame === 'water' ? 'active' : ''}`} 
+              onClick={() => setActiveGame('water')}
+            >
+              倒水拼圖 (Water Puzzle)
+            </button>
+          </div>
+
+          <div className="homework-game-frame-container">
+            {homeworkOpen && (
+              <iframe 
+                className="homework-game-iframe" 
+                id="homework-game-iframe" 
+                src={activeGame === 'mine' ? '/games/mine.html' : '/games/waterpuzzle/WaterPuzzle.html'}
+                title="Homework Game"
+              />
+            )}
+          </div>
         </div>
       </section>
 
